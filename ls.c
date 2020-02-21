@@ -7,10 +7,6 @@
 #include <dirent.h>
 #include <limits.h> 
 
-struct Dir{
-	char path[PATH_MAX];
-};
-
 
 bool isFile(char *path){
 	struct stat path_stat;
@@ -51,7 +47,7 @@ void ls(char *path, bool recurse_flag) {
 		int count =0;
         while (i<n) {
         	//To avoid . and ..
-            if(i < 2 ){
+            if(strcmp(namelist[i]->d_name,".")==0 || strcmp(namelist[i]->d_name,"..")==0){
                 i++;
                 continue;
             }
