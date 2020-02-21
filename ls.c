@@ -69,8 +69,10 @@ void ls(char *path, bool recurse_flag) {
         	for(int i=0;i<count;i++){
         		//printf("%s\n",dirPaths[i]);
         		ls(dirPaths[i],true);
-        		free(dirPaths[i]);
         	}
+        }
+        for(int i=0;i<count;i++){
+            free(dirPaths[i]);
         }
         free(dirPaths);
         free(namelist);
