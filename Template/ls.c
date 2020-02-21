@@ -4,7 +4,7 @@
 #include<string.h>
 #include <stdbool.h>
 
-void ls(char *path, bool metadata_flag) {
+void ls(char *path, bool recurse_flag) {
 	/* Insert code here*/
 }
 
