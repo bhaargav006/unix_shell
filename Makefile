@@ -1,6 +1,9 @@
-all: shell.c build
-	gcc shell.c -o shell 
+all: shell.c util.o build 
+	gcc shell.c -o shell util.o
 	
+util.o: util.c util.h
+	gcc -c util.c
+
 build: ls wc cd 
 	echo "Build completed"
 
