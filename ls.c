@@ -28,6 +28,11 @@ void ls(char *path, bool recurse_flag) {
     	path = cwd;
     }
 
+    if(!isFile(path) && !isDir(path)){
+        printf("Not a file or directory\n");
+        return;
+    }
+
     if(isFile(path)){
     	printf("%s\n",path);
     }
