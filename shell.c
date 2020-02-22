@@ -11,20 +11,10 @@
 
 #include "util.h"
 
-int parse_line(char *input, char *tokens[], char *delim) {
-    int i = 0;
-    char *tok = strtok(input, delim);
 
-    while(tok != NULL) {
-        tokens[i] = tok;
-        i++;
-        tok = strtok(NULL, delim);
-    }
-    tokens[i] = NULL;
-    return i;
-}
-
-void change_dir(char *path) {
+void change_dir(char *path, char* wd) {
+    if(path==NULL)
+    path = wd;
   if (chdir(path) != 0) {
       printf("chdir() to %s failed", path);
   }
@@ -42,75 +32,95 @@ void redirect_to_file(char *file_name, bool overwrite_flag) {
   fclose(fptr);
 }
 
-void execute_command(char *command) {
-  char *redir_file = NULL;
-  bool redirection_flag = false;
-  bool overwrite_flag = true;
+void execute_command(char *command, char* cwd) {
+  
+    char *redir_file = NULL;
+    bool redirection_flag = false;
+    bool overwrite_flag = true;
 
-  // check for redirection
-  char *redir_tokens[2];
-  if(strstr(command , ">>") != NULL) { // redirection append mode
-    parse_line(command, redir_tokens, ">>");
-    command = redir_tokens[0];
-    redir_file = redir_tokens[1];
-    redirection_flag = true;
-    overwrite_flag = false;
-  } else if(strstr(command , ">") != NULL) {
-    parse_line(command, redir_tokens, ">");
-    command = redir_tokens[0];
-    redir_file = redir_tokens[1];
-    redirection_flag = true;
-  }
-
-  char *tokens[MAX_TOKENS];
-  int token_count = parse_line(command, tokens, " ");
-  enum command_type type = get_command_type(tokens[0]);
-
-  if(type == CD) {
-    change_dir(tokens[1]);
-  } else if(type == EXIT)  {
-    printf("Exiting shell\n");
-    exit(0);
-  } else {
-    int pid = fork();
-    if(pid == 0) {
-      if(redirection_flag) {
-        redirect_to_file(redir_file, overwrite_flag);
-      }
-      // handle command execution
-      switch(type) {
-        case LS:
-          execvp("./ls", tokens);
-          break;
-        case WC:
-          execvp("./wc", tokens);
-          break;
-        default:
-          printf("%s: command not found\n", tokens[0]);
-      }
-      // Exec didn't work correctly. So killing child process
-      exit(0); // exit child process
-    } else {
-      waitpid(pid, NULL, 0);
+    // check for redirection
+    char *redir_tokens[2];
+    if(strstr(command , ">>") != NULL) { // redirection append mode
+        parse_line(command, redir_tokens, ">>");
+        command = redir_tokens[0];
+        redir_file = redir_tokens[1];
+        redirection_flag = true;
+        overwrite_flag = false;
+    
+    } else if(strstr(command , ">") != NULL) {
+        parse_line(command, redir_tokens, ">");
+        command = redir_tokens[0];
+        redir_file = redir_tokens[1];
+        redirection_flag = true;
     }
-  }
+
+    char *tokens[MAX_TOKENS];
+    int token_count = parse_line(command, tokens, " ");
+    enum command_type type = get_command_type(tokens[0]);
+
+    if(type == CD) {
+        change_dir(tokens[1], cwd);
+    } else if(type == EXIT)  {
+        printf("Exiting shell\n");
+        exit(0);
+    } else {
+        int pid = fork();
+        if(pid == 0) {
+            if(redirection_flag) {
+                redirect_to_file(redir_file, overwrite_flag);
+            }
+            // handle command execution
+            switch(type) {
+                case LS:{
+                    char path[PATH_MAX];
+                    strcpy(path,cwd);
+                    strcat(path,"/ls");
+                    //printf("%s\n",path);
+                    execvp(path, tokens);
+                    break;
+                }
+                case WC:{
+                    char path[PATH_MAX];
+                    strcpy(path,cwd);
+                    strcat(path,"/wc");
+                    execvp(path, tokens);
+                    break;
+                }
+                default: {
+                    char path[PATH_MAX];
+                    strcpy(path,"/bin/");
+                    strcat(path,tokens[0]);
+                    //printf("%s\n",path);
+                    execvp(tokens[0], tokens);
+                }
+            }
+            // Exec didn't work correctly. So killing child process
+            exit(0); // exit child process
+        } else {
+            waitpid(pid, NULL, 0);
+        }
+    }
 }
 
-void print_prompt()
-{
-  char cwd[PATH_MAX];
-  if (getcwd(cwd, sizeof(cwd)) != NULL) {
-    printf("[4061-shell]%s $", cwd);
-    fflush(stdout);
-  } else {
-    perror("getcwd() error");
-  }
+void print_prompt(){
+
+    char cwd[PATH_MAX];
+    if (getcwd(cwd, sizeof(cwd)) != NULL) {
+        printf("[4061-shell]%s $ ", cwd);
+        fflush(stdout);
+    } else {
+        perror("getcwd() error");
+    }
 }
 
 int main(){
-	/*write code here*/
+
+    print_prompt();
     char inbuf[MAX_CMD_LEN];
     fcntl(STDIN_FILENO, F_SETFL, fcntl(0, F_GETFL));
+
+    char cwd[PATH_MAX];
+    getcwd(cwd,sizeof(cwd));
 
     while(1) {
         memset(inbuf, '\0', MAX_CMD_LEN);
@@ -138,7 +148,7 @@ int main(){
                         dup2(pd[0], 0);
                         close(pd[0]);
                         close(pd[1]);
-                        execute_command(tokens[1]);
+                        execute_command(tokens[1], cwd);
                         exit(0);
                     }
 
@@ -147,7 +157,7 @@ int main(){
                         dup2(pd[1], 1);
                         close(pd[0]);
                         close(pd[1]);
-                        execute_command(tokens[0]);
+                        execute_command(tokens[0], cwd);
                         exit(0);
                     }
 
@@ -166,7 +176,7 @@ int main(){
 
                 } else {
                     // No pipe case
-                    execute_command(tokens[0]);
+                    execute_command(tokens[0], cwd);
                 }   
             }
             print_prompt();
