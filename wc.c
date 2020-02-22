@@ -68,8 +68,19 @@ int main(int argc, char** argv){
 		} else {
 			printf("Invalid arguments\n");
 		}
-	} else { 
-    	wc(0, argv[1]);
-  }
+	} else if (argc==2){
+	 	if(strcmp(argv[1], "-l") == 0) { 
+			wc(1, NULL);
+		} else if(strcmp(argv[1], "-w") == 0) { 
+			wc(2, NULL);
+		} else if(strcmp(argv[1], "-c") == 0) { 
+			wc(3, NULL);
+		} else {
+    		wc(0, argv[1]);
+    	}
+  	} else {
+  		wc(0,NULL);
+  	}
+
 	return 0;
 }
